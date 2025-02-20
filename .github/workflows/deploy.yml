@@ -1,0 +1,50 @@
+name: Deploy Spring Boot to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build Spring Boot Application
+        run: |
+          mvn clean package
+
+      - name: Build Docker Image
+        run: |
+          docker build -t my-springboot-app .
+
+      - name: Copy Docker Image to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ubuntu
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          scp -i private_key.pem -o StrictHostKeyChecking=no target/*.jar $USER@$HOST:/home/ubuntu/app.jar
+
+      - name: Deploy on EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ubuntu
+        run: |
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            sudo docker stop myapp || true
+            sudo docker rm myapp || true
+            sudo docker run -d --name myapp -p 8080:8080 my-springboot-app
+          EOF
