@@ -33,9 +33,9 @@ jobs:
           HOST: ${{ secrets.EC2_HOST }}
           USER: ubuntu
         run: |
-          echo "$PRIVATE_KEY" > private_key.pem
-          chmod 600 private_key.pem
-          scp -i private_key.pem -o StrictHostKeyChecking=no target/*.jar $USER@$HOST:/home/ubuntu/app.jar
+          echo "$PRIVATE_KEY" > my_key.pem
+          chmod 600 my_key.pem
+          scp -i my_key.pem -o StrictHostKeyChecking=no target/*.jar $USER@$HOST:/home/ubuntu/app.jar
 
       - name: Deploy on EC2
         env:
@@ -43,7 +43,7 @@ jobs:
           HOST: ${{ secrets.EC2_HOST }}
           USER: ubuntu
         run: |
-          ssh -i private_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+          ssh -i my_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
             sudo docker stop myapp || true
             sudo docker rm myapp || true
             sudo docker run -d --name myapp -p 8080:8080 my-springboot-app
