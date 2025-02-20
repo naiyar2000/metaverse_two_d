@@ -27,18 +27,19 @@ jobs:
         run: |
           docker build -t my-springboot-app .
 
-      - name: Setup SSH Key
+      - name: Save Docker Image as Tar File
         run: |
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" | tr -d '\r' > my_key.pem
-          chmod 600 my_key.pem
+          docker save -o myapp.tar my-springboot-app
 
       - name: Copy Docker Image to EC2
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
-          USER: ec2-user
+          USER: ec2-user  # Amazon Linux uses 'ec2-user'
         run: |
-          scp -i my_key.pem -o StrictHostKeyChecking=no target/*.jar $USER@$HOST:/home/ec2-user/app.jar
+          echo "$PRIVATE_KEY" > my_key.pem
+          chmod 600 my_key.pem
+          scp -i my_key.pem -o StrictHostKeyChecking=no myapp.tar $USER@$HOST:/home/ec2-user/
 
       - name: Deploy on EC2
         env:
@@ -47,7 +48,21 @@ jobs:
           USER: ec2-user
         run: |
           ssh -i my_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            # Install Docker if not installed
+            if ! command -v docker &> /dev/null; then
+              sudo yum update -y
+              sudo yum install -y docker
+              sudo systemctl start docker
+              sudo systemctl enable docker
+            fi
+          
+            # Load Docker Image
+            sudo docker load -i /home/ec2-user/myapp.tar
+          
+            # Stop and Remove old container if it exists
             sudo docker stop myapp || true
             sudo docker rm myapp || true
+          
+            # Run new container
             sudo docker run -d --name myapp -p 8080:8080 my-springboot-app
           EOF
