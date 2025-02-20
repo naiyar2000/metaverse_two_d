@@ -27,14 +27,17 @@ jobs:
         run: |
           docker build -t my-springboot-app .
 
+      - name: Setup SSH Key
+        run: |
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" | tr -d '\r' > my_key.pem
+          chmod 600 my_key.pem
+
       - name: Copy Docker Image to EC2
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
           USER: ubuntu
         run: |
-          echo "$PRIVATE_KEY" > my_key.pem
-          chmod 600 my_key.pem
           scp -i my_key.pem -o StrictHostKeyChecking=no target/*.jar $USER@$HOST:/home/ubuntu/app.jar
 
       - name: Deploy on EC2
