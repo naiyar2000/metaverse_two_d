@@ -4,6 +4,7 @@ FROM openjdk:17-jdk-slim
 # Set working directory
 WORKDIR /app
 
+
 # Copy application JAR file
 COPY target/*.jar app.jar
 
