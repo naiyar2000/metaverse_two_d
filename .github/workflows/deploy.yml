@@ -36,15 +36,15 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
-          USER: ubuntu
+          USER: ec2-user
         run: |
-          scp -i my_key.pem -o StrictHostKeyChecking=no target/*.jar $USER@$HOST:/home/ubuntu/app.jar
+          scp -i my_key.pem -o StrictHostKeyChecking=no target/*.jar $USER@$HOST:/home/ec2-user/app.jar
 
       - name: Deploy on EC2
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
-          USER: ubuntu
+          USER: ec2-user
         run: |
           ssh -i my_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
             sudo docker stop myapp || true
